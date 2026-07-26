@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7faf7;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --muted: #e8efe8;
+  --muted-foreground: #5c665c;
+  --border: #d5e0d5;
+  --naija-green: #007a33;
+  --naija-green-dark: #006400;
+  --naija-gold: #ffd700;
+}
+
+.dark {
+  --background: #121212;
+  --foreground: #f0f0f0;
+  --card: #1e1e1e;
+  --card-foreground: #f0f0f0;
+  --muted: #2a2a2a;
+  --muted-foreground: #b0b0b0;
+  --border: #333333;
+  --naija-green: #0a9b45;
+  --naija-green-dark: #006400;
+  --naija-gold: #ffd700;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-naija-green: var(--naija-green);
+  --color-naija-green-dark: var(--naija-green-dark);
+  --color-naija-gold: var(--naija-gold);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Prefer class-based dark mode over system media when theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --background: #121212;
+    --foreground: #f0f0f0;
+    --card: #1e1e1e;
+    --card-foreground: #f0f0f0;
+    --muted: #2a2a2a;
+    --muted-foreground: #b0b0b0;
+    --border: #333333;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--naija-gold);
+  color: #111;
+  font-weight: 700;
+  border-radius: 0 0 0.4rem 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}

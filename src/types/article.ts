@@ -8,8 +8,6 @@ export type NewsCategory =
 
 export type CategoryFilter = 'All' | NewsCategory;
 
-export type AppView = 'news' | 'detail' | 'saved';
-
 export type ThemeMode = 'light' | 'dark';
 
 export interface Article {
