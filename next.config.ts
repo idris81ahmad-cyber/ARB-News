@@ -2,8 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
-    // Live news images come from many publishers; ArticleImage uses
-    // unoptimized for non-Unsplash hosts. Unsplash stays optimized.
+    // Unsplash is optimized; other news CDN hosts use unoptimized in ArticleImage.
     remotePatterns: [
       {
         protocol: 'https',
@@ -11,16 +10,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '**.unsplash.com',
+        hostname: 'cdn.mos.cms.futurecdn.net',
       },
-      // Allow remote news image hosts when optimization is enabled later
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: '**.wp.com',
       },
       {
-        protocol: 'http',
-        hostname: '**',
+        protocol: 'https',
+        hostname: 'punchng.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.punchng.com',
       },
     ],
   },
