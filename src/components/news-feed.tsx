@@ -13,6 +13,7 @@ export function NewsFeed() {
     filteredArticles,
     status,
     error,
+    meta,
     category,
     searchQuery,
     setCategory,
@@ -21,7 +22,13 @@ export function NewsFeed() {
   } = useArticles();
   const { storageError: savedError } = useSaved();
   const { storageError: themeError } = useTheme();
-  const banner = savedError || themeError;
+  const banner = savedError || themeError || meta?.warning || null;
+  const liveLabel =
+    meta && !meta.fallback
+      ? `Live · ${meta.source} · ${meta.count} stories`
+      : meta?.fallback
+        ? 'Sample data'
+        : null;
 
   return (
     <>
@@ -41,13 +48,20 @@ export function NewsFeed() {
         </div>
       )}
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <h2
-          id="main-heading"
-          tabIndex={-1}
-          className="mb-6 text-center text-2xl font-bold text-naija-green dark:text-emerald-300 sm:text-3xl"
-        >
-          📰 Latest Nigerian Headlines
-        </h2>
+        <div className="mb-6 text-center">
+          <h2
+            id="main-heading"
+            tabIndex={-1}
+            className="text-2xl font-bold text-naija-green dark:text-emerald-300 sm:text-3xl"
+          >
+            📰 Latest Nigerian Headlines
+          </h2>
+          {liveLabel && (
+            <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">
+              {liveLabel}
+            </p>
+          )}
+        </div>
 
         {status === 'loading' && <SkeletonGrid count={6} />}
 

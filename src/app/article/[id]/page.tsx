@@ -3,13 +3,21 @@ import { notFound } from 'next/navigation';
 import { ArticleDetailClient } from '@/components/article-detail-client';
 import { getArticleById, getArticles, getRelatedArticles } from '@/lib/articles';
 
+export const revalidate = 300;
+export const dynamicParams = true;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export async function generateStaticParams() {
-  const articles = await getArticles();
-  return articles.map((a) => ({ id: String(a.id) }));
+  // Prefetch known ids at build time (sample or live, depending on env).
+  try {
+    const articles = await getArticles();
+    return articles.slice(0, 30).map((a) => ({ id: String(a.id) }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -22,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: article.title,
       description: article.content.slice(0, 160),
-      images: [article.imageUrl],
+      images: article.imageUrl ? [article.imageUrl] : undefined,
     },
   };
 }

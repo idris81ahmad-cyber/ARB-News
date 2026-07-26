@@ -32,6 +32,15 @@ interface ArticleImageProps {
   height?: number;
 }
 
+function isKnownOptimizerHost(src: string): boolean {
+  try {
+    const host = new URL(src).hostname;
+    return host === 'images.unsplash.com' || host.endsWith('.unsplash.com');
+  } catch {
+    return false;
+  }
+}
+
 export function ArticleImage({
   src,
   alt,
@@ -45,8 +54,11 @@ export function ArticleImage({
   const [failed, setFailed] = useState(false);
   const currentSrc = failed ? PLACEHOLDER_IMAGE : src;
 
-  // data: URLs need unoptimized; remote uses next/image optimizer when configured
-  const unoptimized = failed || currentSrc.startsWith('data:');
+  // News APIs serve images from many CDNs; only optimize known hosts.
+  const unoptimized =
+    failed ||
+    currentSrc.startsWith('data:') ||
+    !isKnownOptimizerHost(currentSrc);
 
   if (fill) {
     return (

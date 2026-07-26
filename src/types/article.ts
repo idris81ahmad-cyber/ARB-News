@@ -18,6 +18,8 @@ export interface Article {
   imageUrl: string;
   date: string;
   source: string;
+  /** Original publisher URL when loaded from a live news API. */
+  url?: string;
 }
 
 export const CATEGORIES: CategoryFilter[] = [

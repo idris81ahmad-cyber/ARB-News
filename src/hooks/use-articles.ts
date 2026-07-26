@@ -1,15 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { filterArticles, getRelatedArticles } from '@/lib/articles';
+import { filterArticles, getRelatedArticles } from '@/lib/article-helpers';
 import type { Article, CategoryFilter } from '@/types/article';
 
 export type ArticlesStatus = 'loading' | 'ready' | 'error';
+
+export type ArticlesMeta = {
+  source: string;
+  fallback: boolean;
+  warning: string | null;
+  count: number;
+  fetchedAt: string;
+};
 
 export function useArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [status, setStatus] = useState<ArticlesStatus>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<ArticlesMeta | null>(null);
   const [category, setCategory] = useState<CategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -17,10 +26,18 @@ export function useArticles() {
     setStatus('loading');
     setError(null);
     try {
-      const res = await fetch('/api/articles');
-      if (!res.ok) throw new Error('Failed to load articles');
-      const data = (await res.json()) as { articles: Article[] };
-      setArticles(data.articles);
+      const res = await fetch('/api/articles', { cache: 'no-store' });
+      const data = (await res.json()) as {
+        articles: Article[];
+        meta?: ArticlesMeta;
+      };
+
+      if (!res.ok && (!data.articles || data.articles.length === 0)) {
+        throw new Error(data.meta?.warning || 'Failed to load articles');
+      }
+
+      setArticles(data.articles ?? []);
+      setMeta(data.meta ?? null);
       setStatus('ready');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load articles';
@@ -48,6 +65,7 @@ export function useArticles() {
     filteredArticles,
     status,
     error,
+    meta,
     category,
     searchQuery,
     setCategory,

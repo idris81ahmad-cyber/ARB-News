@@ -1,6 +1,6 @@
 import type { Article } from '@/types/article';
 
-/** Sample headlines — replace with a real API later. */
+/** Sample headlines used when no news API key is set or live providers fail. */
 export const sampleArticles: Article[] = [
   {
     id: 1,

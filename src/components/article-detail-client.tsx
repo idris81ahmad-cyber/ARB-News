@@ -1,6 +1,6 @@
 'use client';
 
-import { Share2 } from 'lucide-react';
+import { ExternalLink, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
@@ -14,7 +14,9 @@ import { estimateReadingTime } from '@/lib/reading-time';
 import { CATEGORY_ICONS, type Article } from '@/types/article';
 
 async function shareArticle(article: Article): Promise<void> {
-  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const url =
+    article.url ||
+    (typeof window !== 'undefined' ? window.location.href : '');
   const payload = {
     title: article.title,
     text: `${article.title} — via ARB News`,
@@ -124,6 +126,19 @@ export function ArticleDetailClient({ article, related }: ArticleDetailClientPro
                 <Share2 className="h-4 w-4" aria-hidden />
                 Share
               </Button>
+              {article.url && (
+                <Button asChild variant="outline">
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Read full story on publisher site"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    Full story
+                  </a>
+                </Button>
+              )}
             </div>
 
             {related.length > 0 && (
