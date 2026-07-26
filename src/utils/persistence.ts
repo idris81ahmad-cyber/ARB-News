@@ -5,41 +5,50 @@ type Persistence = {
   clear(): Promise<void>;
 };
 
-function getStorage(): PersistentStorage | Storage {
-  if (typeof window !== 'undefined' && (window as any).persistentStorage) {
-    return (window as any).persistentStorage;
-  }
-  // Fallback to localStorage for standard browsers / development
+function createLocalStorageAdapter(): Persistence {
   return {
-    setItem(key: string, value: string) {
+    async setItem(key, value) {
       localStorage.setItem(key, value);
-      return Promise.resolve();
     },
-    getItem(key: string) {
-      return Promise.resolve(localStorage.getItem(key));
+    async getItem(key) {
+      return localStorage.getItem(key);
     },
-    removeItem(key: string) {
+    async removeItem(key) {
       localStorage.removeItem(key);
-      return Promise.resolve();
     },
-    clear() {
+    async clear() {
       localStorage.clear();
-      return Promise.resolve();
     },
   };
 }
 
+function getStorage(): Persistence {
+  if (typeof window !== 'undefined' && window.persistentStorage) {
+    return window.persistentStorage;
+  }
+  return createLocalStorageAdapter();
+}
+
 export const persistence: Persistence = {
   setItem(key, value) {
-    return getStorage().setItem(key, value) as Promise<void>;
+    return getStorage().setItem(key, value);
   },
   getItem(key) {
-    return getStorage().getItem(key) as Promise<string | null>;
+    return getStorage().getItem(key);
   },
   removeItem(key) {
-    return getStorage().removeItem(key) as Promise<void>;
+    return getStorage().removeItem(key);
   },
   clear() {
-    return getStorage().clear() as Promise<void>;
+    return getStorage().clear();
   },
 };
+
+export function parseJsonSafe<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}

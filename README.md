@@ -1,22 +1,27 @@
 # ARB News 🇳🇬
 
-**The Pulse of Nigeria** — A modern, responsive React news feed application focused on Nigerian headlines across Politics, Sports, Entertainment, Business, Culture, and Environment.
+**The Pulse of Nigeria** — A modern, accessible React news feed focused on Nigerian headlines across Politics, Sports, Entertainment, Business, Culture, and Environment.
 
 ## Features
 
-- 📰 Category-filtered news feed with beautiful cards
-- 🔍 Article detail view
-- 💾 Save/unsave articles (persisted via `window.persistentStorage`)
-- 🌙 Light / Dark theme toggle (persisted)
-- 🇳🇬 Nigerian green & gold color theme
-- Smooth fade-in animations
+- 📰 Category filter + free-text search
+- 🔍 Article detail view with related stories
+- 💾 Save / unsave articles (localStorage or host `persistentStorage`)
+- 🧹 Clear all saved articles
+- 🌙 Light / dark theme (respects `prefers-color-scheme` on first load)
+- ♿ Accessibility: skip link, ARIA labels, live regions, focus management, Esc to go back
+- 🖼️ Image lazy-load + SVG fallback when remote images fail
+- ⏳ Skeleton loaders while articles load
+- 🛡️ React error boundary around main views
+- ↗ Share (Web Share API + clipboard fallback)
+- 🇳🇬 Green & gold visual identity
 
 ## Tech Stack
 
 - React 18 + TypeScript
-- CSS with CSS variables for theming
-- Custom persistence layer (with localStorage fallback for standard browsers)
-- Vite for development and build
+- Vite
+- Plain CSS (themed with CSS variables)
+- Custom persistence layer with localStorage fallback
 
 ## Project Structure
 
@@ -29,24 +34,14 @@ ARB-News/
 ├── src/
 │   ├── App.tsx / App.css
 │   ├── index.tsx
-│   ├── types/global.d.ts
-│   ├── utils/persistence.ts
+│   ├── components/          # ErrorBoundary, ArticleImage, Skeleton
+│   ├── data/sampleArticles.ts
+│   ├── hooks/               # useArticles, useSavedArticles, useTheme
+│   ├── types/               # Article + global Window types
+│   ├── utils/               # persistence, readingTime
 │   └── features/news/components/
-│       ├── Header.*
-│       ├── NewsFeed.*
-│       ├── ArticleCard.*
-│       ├── ArticleDetail.*
-│       └── SavedArticles.*
-└── .github/workflows/deno.yml
+└── .github/workflows/ci.yml
 ```
-
-## Fixes Applied
-
-- Typo in `persistence.ts` (`pistentStorage` → `persistentStorage`)
-- Conflicting CSS class `.detail-content` used for both container and body text
-- Missing TypeScript declaration for custom storage API
-- Outdated copyright year
-- Added localStorage fallback + Vite scaffolding for easy local development
 
 ## Running Locally
 
@@ -55,10 +50,19 @@ npm install
 npm run dev
 ```
 
-Then open the URL shown by Vite (usually http://localhost:5173).
+Open the URL Vite prints (usually http://localhost:5173).
+
+```bash
+npm run build   # typecheck + production build
+npm run preview # preview production build
+```
+
+## Data Layer
+
+Articles come from `src/data/sampleArticles.ts` via `useArticles`. That hook owns loading state, category + search filtering, and related-article selection — swap the loader body later for a real API without touching presentational components.
 
 ## Notes
 
-Sample articles are illustrative (2023 dates). Images from Unsplash.
+Sample articles are illustrative. Images from Unsplash (with offline/error fallback art).
 
 Built with ❤️ for Naija.

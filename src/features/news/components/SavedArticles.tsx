@@ -1,30 +1,47 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
+import type { Article } from '../../../types/article';
 import ArticleCard from './ArticleCard';
 import './SavedArticles.css';
-
-interface Article {
-  id: number;
-  title: string;
-  category: string;
-  content: string;
-  imageUrl: string;
-  date: string;
-  source: string;
-}
 
 interface SavedArticlesProps {
   articles: Article[];
   onArticleClick: (article: Article) => void;
   onSaveArticle: (article: Article) => void;
+  onClearAll: () => void;
 }
 
-const SavedArticles: React.FC<SavedArticlesProps> = ({ articles, onArticleClick, onSaveArticle }) => {
+const SavedArticles = ({
+  articles,
+  onArticleClick,
+  onSaveArticle,
+  onClearAll,
+}: SavedArticlesProps) => {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <div className="saved-articles">
-      <h2 className="saved-title">💼 Your Saved Nigerian Stories</h2>
+      <div className="saved-header">
+        <h2 className="saved-title" ref={headingRef} tabIndex={-1} id="main-heading">
+          💼 Your Saved Nigerian Stories
+        </h2>
+        {articles.length > 0 && (
+          <button
+            type="button"
+            className="clear-all-btn"
+            onClick={onClearAll}
+            aria-label={`Clear all ${articles.length} saved articles`}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
       {articles.length > 0 ? (
         <div className="articles-grid">
-          {articles.map(article => (
+          {articles.map((article) => (
             <ArticleCard
               key={article.id}
               article={article}
@@ -35,7 +52,9 @@ const SavedArticles: React.FC<SavedArticlesProps> = ({ articles, onArticleClick,
           ))}
         </div>
       ) : (
-        <p className="no-saved">No saved articles yet. Explore the news feed to save fascinating stories! 🚀</p>
+        <p className="no-saved" role="status">
+          No saved articles yet. Explore the news feed to save fascinating stories!
+        </p>
       )}
     </div>
   );

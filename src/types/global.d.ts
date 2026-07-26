@@ -6,5 +6,6 @@ interface PersistentStorage {
 }
 
 interface Window {
-  persistentStorage: PersistentStorage;
+  /** Optional host-provided storage; falls back to localStorage when absent. */
+  persistentStorage?: PersistentStorage;
 }
