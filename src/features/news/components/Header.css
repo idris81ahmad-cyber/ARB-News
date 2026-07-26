@@ -1,0 +1,59 @@
+.header {
+  background-color: #007A33; /* Deeper Nigerian green */
+  color: #ffffff;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-logo h1 {
+  margin: 0;
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.header-logo p {
+  margin: 0;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  color: #333;
+  font-size: 1em;
+}
+
+.nav-btn {
+  padding: 10px 15px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.nav-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle {
+  padding: 10px 15px;
+  background-color: #FFD700; /* Golden yellow */
+  color: #333;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}

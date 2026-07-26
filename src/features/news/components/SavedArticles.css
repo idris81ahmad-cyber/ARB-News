@@ -1,0 +1,22 @@
+.saved-articles {
+  padding: 20px 0;
+}
+
+.saved-title {
+  font-size: 2em;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #007A33;
+}
+
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.no-saved {
+  text-align: center;
+  font-size: 1.2em;
+  color: var(--text-secondary, #666);
+}
