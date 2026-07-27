@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { filterArticles, getRelatedArticles } from '@/lib/article-helpers';
+import { selectTopStories } from '@/lib/news/relevance';
 import type { Article, CategoryFilter } from '@/types/article';
 
 export type ArticlesStatus = 'loading' | 'ready' | 'error';
@@ -73,6 +74,11 @@ export function useArticles() {
     [filteredArticles, visibleCount],
   );
 
+  const topStories = useMemo(
+    () => selectTopStories(articles, 5),
+    [articles],
+  );
+
   const hasMore = visibleCount < filteredArticles.length;
 
   const loadMore = useCallback(() => {
@@ -93,6 +99,7 @@ export function useArticles() {
     articles,
     filteredArticles,
     visibleArticles,
+    topStories,
     totalCount: articles.length,
     filteredCount: filteredArticles.length,
     hasMore,

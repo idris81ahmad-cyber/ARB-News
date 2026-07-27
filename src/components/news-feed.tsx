@@ -5,6 +5,7 @@ import { ArticleCard } from '@/components/article-card';
 import { InfiniteScrollSentinel } from '@/components/infinite-scroll-sentinel';
 import { SkeletonGrid } from '@/components/skeleton-grid';
 import { SiteHeader } from '@/components/site-header';
+import { TopStoriesRail } from '@/components/top-stories-rail';
 import { Button } from '@/components/ui/button';
 import { useArticles } from '@/hooks/use-articles';
 import { useSaved } from '@/components/saved-provider';
@@ -14,6 +15,7 @@ export function NewsFeed() {
   const {
     articles,
     visibleArticles,
+    topStories,
     filteredCount,
     totalCount,
     hasMore,
@@ -138,6 +140,9 @@ export function NewsFeed() {
 
         {status === 'ready' && visibleArticles.length > 0 && (
           <>
+            {!hasFilters && topStories.length > 0 && (
+              <TopStoriesRail stories={topStories} />
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               {visibleArticles.map((article) => (
                 <ArticleCard
