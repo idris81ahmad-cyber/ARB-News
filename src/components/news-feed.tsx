@@ -2,6 +2,7 @@
 
 import { FilterX, RefreshCw } from 'lucide-react';
 import { ArticleCard } from '@/components/article-card';
+import { ContinueReading } from '@/components/continue-reading';
 import { InfiniteScrollSentinel } from '@/components/infinite-scroll-sentinel';
 import { SkeletonGrid } from '@/components/skeleton-grid';
 import { SiteHeader } from '@/components/site-header';
@@ -136,6 +137,10 @@ export function NewsFeed() {
               </p>
             )}
           </div>
+        )}
+
+        {status === 'ready' && (
+          <ContinueReading />
         )}
 
         {status === 'ready' && visibleArticles.length > 0 && (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { ArticleImage } from '@/components/article-image';
 import { RelatedArticles } from '@/components/related-articles';
+import { useReadingHistoryContext } from '@/components/reading-history-provider';
 import { useSaved } from '@/components/saved-provider';
 import { SiteHeader } from '@/components/site-header';
 import { Badge } from '@/components/ui/badge';
@@ -46,12 +47,19 @@ export function ArticleDetailClient({ article, related }: ArticleDetailClientPro
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { isSaved, toggleSave } = useSaved();
+  const { recordRead } = useReadingHistoryContext();
   const saved = isSaved(article.id);
   const minutes = estimateReadingTime(article.content);
   const icon = CATEGORY_ICONS[article.category];
 
   useEffect(() => {
     headingRef.current?.focus();
+  }, [article.id]);
+
+  useEffect(() => {
+    void recordRead(article);
+    // Only re-record when the article identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.id]);
 
   useEffect(() => {
