@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { filterArticles, getRelatedArticles } from '@/lib/article-helpers';
 import type { Article, CategoryFilter } from '@/types/article';
 
@@ -16,6 +17,8 @@ export type ArticlesMeta = {
   requestId?: string;
 };
 
+const PAGE_SIZE = 9;
+
 export function useArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [status, setStatus] = useState<ArticlesStatus>('loading');
@@ -23,6 +26,9 @@ export function useArticles() {
   const [meta, setMeta] = useState<ArticlesMeta | null>(null);
   const [category, setCategory] = useState<CategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const debouncedSearch = useDebouncedValue(searchQuery, 320);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -52,13 +58,29 @@ export function useArticles() {
     void load();
   }, [load]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [category, debouncedSearch]);
+
   const filteredArticles = useMemo(
-    () => filterArticles(articles, category, searchQuery),
-    [articles, category, searchQuery],
+    () => filterArticles(articles, category, debouncedSearch),
+    [articles, category, debouncedSearch],
   );
 
+  const visibleArticles = useMemo(
+    () => filteredArticles.slice(0, visibleCount),
+    [filteredArticles, visibleCount],
+  );
+
+  const hasMore = visibleCount < filteredArticles.length;
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((n) => n + PAGE_SIZE);
+  }, []);
+
   const getRelated = useCallback(
-    (article: Article, limit = 3) => getRelatedArticles(articles, article, limit),
+    (article: Article, limit = 4) => getRelatedArticles(articles, article, limit),
     [articles],
   );
 
@@ -70,12 +92,18 @@ export function useArticles() {
   return {
     articles,
     filteredArticles,
+    visibleArticles,
     totalCount: articles.length,
+    filteredCount: filteredArticles.length,
+    hasMore,
+    loadMore,
+    pageSize: PAGE_SIZE,
     status,
     error,
     meta,
     category,
     searchQuery,
+    debouncedSearch,
     setCategory,
     setSearchQuery,
     clearFilters,

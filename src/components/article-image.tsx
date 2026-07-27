@@ -1,7 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export const PLACEHOLDER_IMAGE =
@@ -21,6 +20,9 @@ export const PLACEHOLDER_IMAGE =
   <text x="400" y="300" text-anchor="middle" fill="#FFD700" font-family="Segoe UI, Arial, sans-serif" font-size="20">The Pulse of Nigeria</text>
 </svg>`.trim());
 
+const FALLBACK_STOCK =
+  'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=500&fit=crop&auto=format';
+
 interface ArticleImageProps {
   src: string;
   alt: string;
@@ -32,60 +34,78 @@ interface ArticleImageProps {
   height?: number;
 }
 
-function isKnownOptimizerHost(src: string): boolean {
-  try {
-    const host = new URL(src).hostname;
-    return host === 'images.unsplash.com' || host.endsWith('.unsplash.com');
-  } catch {
-    return false;
+function buildCandidates(src: string): string[] {
+  const list: string[] = [];
+  const trimmed = (src || '').trim();
+
+  if (trimmed && !trimmed.startsWith('data:')) {
+    list.push(trimmed);
+    // Drop query string — some CDNs choke on resized params from aggregators
+    try {
+      const u = new URL(trimmed);
+      if (u.search) {
+        u.search = '';
+        list.push(u.toString());
+      }
+      // Prefer https
+      if (u.protocol === 'http:') {
+        u.protocol = 'https:';
+        list.push(u.toString());
+      }
+    } catch {
+      /* ignore bad urls */
+    }
   }
+
+  list.push(FALLBACK_STOCK);
+  list.push(PLACEHOLDER_IMAGE);
+
+  // unique preserve order
+  return [...new Set(list)];
 }
 
+/**
+ * Aggressive image loading for flaky news CDNs:
+ * try original → stripped query → https upgrade → stock → local SVG.
+ * Uses native <img> (more reliable than next/image for arbitrary hosts).
+ */
 export function ArticleImage({
   src,
   alt,
   className,
   priority,
-  sizes = '(max-width: 768px) 100vw, 400px',
   fill,
   width,
   height,
 }: ArticleImageProps) {
-  const [failed, setFailed] = useState(false);
-  const currentSrc = failed ? PLACEHOLDER_IMAGE : src;
+  const candidates = useMemo(() => buildCandidates(src), [src]);
+  const [index, setIndex] = useState(0);
 
-  // News APIs serve images from many CDNs; only optimize known hosts.
-  const unoptimized =
-    failed ||
-    currentSrc.startsWith('data:') ||
-    !isKnownOptimizerHost(currentSrc);
+  useEffect(() => {
+    setIndex(0);
+  }, [src]);
 
-  if (fill) {
-    return (
-      <Image
-        src={currentSrc}
-        alt={failed ? `${alt} (image unavailable)` : alt}
-        fill
-        className={cn('object-cover', className)}
-        sizes={sizes}
-        priority={priority}
-        unoptimized={unoptimized}
-        onError={() => setFailed(true)}
-      />
-    );
-  }
+  const currentSrc = candidates[Math.min(index, candidates.length - 1)];
+  const failedAll = index >= candidates.length - 1 && currentSrc === PLACEHOLDER_IMAGE;
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={currentSrc}
-      alt={failed ? `${alt} (image unavailable)` : alt}
-      width={width ?? 800}
-      height={height ?? 500}
-      className={cn('object-cover', className)}
-      sizes={sizes}
-      priority={priority}
-      unoptimized={unoptimized}
-      onError={() => setFailed(true)}
+      alt={failedAll || currentSrc === PLACEHOLDER_IMAGE ? `${alt || 'Article'} (image unavailable)` : alt}
+      className={cn(
+        fill ? 'absolute inset-0 h-full w-full object-cover' : 'object-cover',
+        'bg-emerald-50 dark:bg-emerald-950',
+        className,
+      )}
+      width={fill ? undefined : width ?? 800}
+      height={fill ? undefined : height ?? 500}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => {
+        setIndex((i) => Math.min(i + 1, candidates.length - 1));
+      }}
     />
   );
 }

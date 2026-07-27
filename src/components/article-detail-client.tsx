@@ -1,10 +1,10 @@
 'use client';
 
 import { ExternalLink, Share2 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { ArticleImage } from '@/components/article-image';
+import { RelatedArticles } from '@/components/related-articles';
 import { useSaved } from '@/components/saved-provider';
 import { SiteHeader } from '@/components/site-header';
 import { Badge } from '@/components/ui/badge';
@@ -141,31 +141,7 @@ export function ArticleDetailClient({ article, related }: ArticleDetailClientPro
               )}
             </div>
 
-            {related.length > 0 && (
-              <section
-                className="mt-8 border-t border-border pt-6"
-                aria-labelledby="related-heading"
-              >
-                <h2
-                  id="related-heading"
-                  className="mb-3 text-lg font-semibold text-naija-green dark:text-emerald-300"
-                >
-                  Related in {article.category}
-                </h2>
-                <ul className="space-y-2">
-                  {related.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        href={`/article/${item.id}`}
-                        className="block rounded-md border-l-4 border-naija-gold bg-emerald-50/70 px-3 py-2.5 text-sm font-medium hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/40"
-                      >
-                        {item.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            <RelatedArticles seedTitle={article.title} related={related} />
           </CardContent>
         </Card>
       </article>

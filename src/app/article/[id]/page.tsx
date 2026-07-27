@@ -44,7 +44,7 @@ export default async function ArticlePage({ params }: PageProps) {
   if (!article) notFound();
 
   const all = await getArticles();
-  const related = getRelatedArticles(all, article);
+  const related = getRelatedArticles(all, article, 4);
 
   return <ArticleDetailClient article={article} related={related} />;
 }

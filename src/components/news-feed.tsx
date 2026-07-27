@@ -2,6 +2,7 @@
 
 import { FilterX, RefreshCw } from 'lucide-react';
 import { ArticleCard } from '@/components/article-card';
+import { InfiniteScrollSentinel } from '@/components/infinite-scroll-sentinel';
 import { SkeletonGrid } from '@/components/skeleton-grid';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
@@ -12,13 +13,17 @@ import { useTheme } from '@/components/theme-provider';
 export function NewsFeed() {
   const {
     articles,
-    filteredArticles,
+    visibleArticles,
+    filteredCount,
     totalCount,
+    hasMore,
+    loadMore,
     status,
     error,
     meta,
     category,
     searchQuery,
+    debouncedSearch,
     setCategory,
     setSearchQuery,
     clearFilters,
@@ -36,7 +41,7 @@ export function NewsFeed() {
   })();
 
   const hasFilters = category !== 'All' || searchQuery.trim().length > 0;
-  const showingCount = filteredArticles.length;
+  const searching = searchQuery !== debouncedSearch;
 
   return (
     <>
@@ -70,9 +75,10 @@ export function NewsFeed() {
             </p>
           )}
           {status === 'ready' && totalCount > 0 && (
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Showing {showingCount} of {totalCount}
-              {hasFilters ? ' (filtered)' : ''}
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm" aria-live="polite">
+              Showing {visibleArticles.length} of {filteredCount}
+              {filteredCount !== totalCount ? ` (filtered from ${totalCount})` : ''}
+              {searching ? ' · updating…' : ''}
             </p>
           )}
         </div>
@@ -92,7 +98,7 @@ export function NewsFeed() {
           </div>
         )}
 
-        {status === 'ready' && filteredArticles.length === 0 && (
+        {status === 'ready' && filteredCount === 0 && (
           <div
             className="mx-auto max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm"
             role="status"
@@ -103,8 +109,8 @@ export function NewsFeed() {
             />
             <h3 className="text-lg font-semibold">No matching stories</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {searchQuery.trim()
-                ? `Nothing matched “${searchQuery.trim()}”${
+              {debouncedSearch.trim()
+                ? `Nothing matched “${debouncedSearch.trim()}”${
                     category !== 'All' ? ` in ${category}` : ''
                   }. Try fewer keywords or another category.`
                 : category !== 'All'
@@ -130,12 +136,26 @@ export function NewsFeed() {
           </div>
         )}
 
-        {status === 'ready' && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-            {filteredArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
+        {status === 'ready' && visibleArticles.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              {visibleArticles.map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                  highlightQuery={debouncedSearch}
+                />
+              ))}
+            </div>
+            <InfiniteScrollSentinel hasMore={hasMore} onLoadMore={loadMore} />
+            {hasMore && (
+              <div className="flex justify-center pb-6">
+                <Button type="button" variant="outline" onClick={loadMore}>
+                  Load more stories
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

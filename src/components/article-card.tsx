@@ -3,6 +3,7 @@
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { ArticleImage } from '@/components/article-image';
+import { HighlightText } from '@/components/highlight-text';
 import { useSaved } from '@/components/saved-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,9 +13,10 @@ import { CATEGORY_ICONS, type Article } from '@/types/article';
 
 interface ArticleCardProps {
   article: Article;
+  highlightQuery?: string;
 }
 
-export function ArticleCard({ article }: ArticleCardProps) {
+export function ArticleCard({ article, highlightQuery = '' }: ArticleCardProps) {
   const { isSaved, toggleSave } = useSaved();
   const saved = isSaved(article.id);
   const minutes = estimateReadingTime(article.content);
@@ -58,16 +60,16 @@ export function ArticleCard({ article }: ArticleCardProps) {
         </div>
         <Link href={`/article/${article.id}`}>
           <h3 className="text-base font-bold leading-snug sm:text-lg hover:text-naija-green dark:hover:text-emerald-300">
-            {article.title}
+            <HighlightText text={article.title} query={highlightQuery} />
           </h3>
         </Link>
         <p className="line-clamp-3 text-sm text-muted-foreground">
-          {article.content}
+          <HighlightText text={article.content} query={highlightQuery} />
         </p>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            {article.source} · {new Date(article.date).toLocaleDateString()} ·{' '}
-            {minutes} min read
+            <HighlightText text={article.source} query={highlightQuery} /> ·{' '}
+            {new Date(article.date).toLocaleDateString()} · {minutes} min read
           </span>
           <Button
             type="button"
