@@ -13,6 +13,8 @@
 | `GNEWS_API_KEY` or `NEWS_API_KEY` | One of them for live news | Free tiers OK |
 | `NEWS_PROVIDER` | Optional | `auto` / `gnews` / `newsapi` |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | e.g. `https://arb-news-next.vercel.app` |
+| `ADMIN_SECRET` | For `/admin` source control | Min 8 characters |
+| `SOURCE_CONTROL_JSON` | Optional durable filters | Export from admin UI |
 
 Local:
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadNews } from '@/lib/articles';
 import { createRequestId, newsLog } from '@/lib/news/log';
+import { getSourceControl } from '@/lib/source-control/store';
 
 export const revalidate = 300; // 5 minutes
 
@@ -10,11 +11,13 @@ export async function GET() {
 
   try {
     const result = await loadNews({ requestId });
+    const control = getSourceControl();
 
     newsLog('info', 'GET /api/articles ok', {
       requestId,
       provider: result.source,
       count: result.articles.length,
+      dropped: result.droppedByControl ?? 0,
       stale: result.stale ?? false,
       durationMs: Date.now() - started,
     });
@@ -30,6 +33,15 @@ export async function GET() {
           count: result.articles.length,
           fetchedAt: new Date().toISOString(),
           requestId,
+          droppedByControl: result.droppedByControl ?? 0,
+          sourceStats: result.sourceStats ?? [],
+          control: {
+            preferTier1Only: control.preferTier1Only,
+            minRelevanceScore: control.minRelevanceScore,
+            blockedCount: control.blockedSources.length,
+            allowedCount: control.allowedSources.length,
+            disabledCategories: control.disabledCategories,
+          },
         },
       },
       {
