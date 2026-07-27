@@ -10,12 +10,12 @@ describe('inferCategory', () => {
     ).toBe('Sports');
   });
 
-  it('detects sports', () => {
+  it('detects NPFL as sports', () => {
     expect(inferCategory('NPFL title race heats up in Lagos')).toBe('Sports');
   });
 
   it('detects business / naira', () => {
-    expect(inferCategory('Naira strengthens as banks report profits')).toBe(
+    expect(inferCategory('Naira strengthens as CBN and banks report profits')).toBe(
       'Business',
     );
   });
@@ -30,6 +30,18 @@ describe('inferCategory', () => {
     expect(
       inferCategory('Senate passes bill as Tinubu meets governors in Abuja'),
     ).toBe('Politics');
+  });
+
+  it('detects environment floods', () => {
+    expect(
+      inferCategory('Flooding displaces thousands after heavy rainfall in Kano'),
+    ).toBe('Environment');
+  });
+
+  it('detects culture carnival', () => {
+    expect(inferCategory('Calabar carnival draws millions of tourists')).toBe(
+      'Culture',
+    );
   });
 
   it('uses provider category hints', () => {

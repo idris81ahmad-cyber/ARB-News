@@ -2,69 +2,84 @@ import type { NewsCategory } from '@/types/article';
 
 type Rule = {
   category: NewsCategory;
+  /** Multiplier per matching pattern group */
   weight: number;
   patterns: RegExp[];
+  /** Extra points when ANY of these high-signal patterns match */
+  boosts?: RegExp[];
 };
 
 /**
- * Ordered, weighted rules. Higher total score wins.
- * Sports/Entertainment checked with strong Naija-specific signals so they
- * aren't swallowed by generic "government/politics" wording.
+ * Weighted multi-signal classifier for Nigerian news.
+ * Strong sport/entertainment signals beat weak politics noise.
  */
 const RULES: Rule[] = [
   {
     category: 'Sports',
     weight: 4,
     patterns: [
-      /\b(super eagles|eagles|afcon|npfl|nwsl|fifa|uefa|champions league)\b/i,
-      /\b(football|soccer|match|fixture|striker|goalkeeper|midfielder|coach|manager)\b/i,
-      /\b(basketball|d\s*'?\s*tigers|athletics|boxing|wrestling|tennis|olympic|medal|tournament|league table|transfer)\b/i,
+      /\b(super eagles|flying eagles|falcons|d\s*'?\s*tigers|npfl|afcon|caf)\b/i,
+      /\b(football|soccer|fixture|striker|goalkeeper|midfielder|winger|hat-?trick)\b/i,
+      /\b(basketball|athletics|boxing|wrestling|tennis|olympic|medal|tournament|transfer window)\b/i,
+      /\b(league table|matchday|full[- ]time|half[- ]time|penalty kick|offside)\b/i,
       /\b(sports?|sporting)\b/i,
+    ],
+    boosts: [
+      /\b(super eagles|afcon|npfl|caf champions|premier league fixture)\b/i,
     ],
   },
   {
     category: 'Entertainment',
     weight: 4,
     patterns: [
-      /\b(nollywood|afrobeats?|afrobeat|burna|wizkid|davido|tems|rema|asake)\b/i,
-      /\b(music|album|single|concert|tour|grammy|oscar|film|movie|cinema|actor|actress|celebrity)\b/i,
-      /\b(entertainment|showbiz|netflix|streaming series|premiere)\b/i,
+      /\b(nollywood|afrobeats?|afrobeat|burna boy|wizkid|davido|tems|rema|asake|ayra starr)\b/i,
+      /\b(music|album|ep\b|single|concert|tour|grammy|oscar|film|movie|cinema|actor|actress)\b/i,
+      /\b(entertainment|showbiz|netflix|streaming series|premiere|box office|celebrity)\b/i,
+      /\b(comedian|skit maker|influencer|fashion week|red carpet)\b/i,
     ],
+    boosts: [/\b(nollywood|afrobeats?|grammy|wizkid|davido|burna)\b/i],
   },
   {
     category: 'Business',
     weight: 3,
     patterns: [
-      /\b(naira|cbn|fintech|startup|ipo|stock market|equities|inflation|gdp|fx|forex|bank|banking)\b/i,
-      /\b(business|economy|economic|trade|commerce|investment|investor|oil price|nnpc|sec nigeria)\b/i,
-      /\b(market cap|revenue|profit|sme|export|import|crypto|bitcoin)\b/i,
+      /\b(naira|cbn|fintech|startup|ipo|equities|inflation|gdp|forex|fx market)\b/i,
+      /\b(business|economy|economic|trade|commerce|investment|investor|oil price|nnpc)\b/i,
+      /\b(bank|banking|sme|export|import|crypto|bitcoin|sec nigeria|stock exchange|ngx)\b/i,
+      /\b(revenue|profit|market cap|interest rate|monetary policy)\b/i,
     ],
+    boosts: [/\b(naira|cbn|fintech|ngx|stock market)\b/i],
   },
   {
     category: 'Environment',
     weight: 3,
     patterns: [
       /\b(climate|flood|flooding|drought|pollution|deforestation|desertification|erosion)\b/i,
-      /\b(environment(al)?|renewable|solar|emissions|wildlife|reforestation|green economy)\b/i,
-      /\b(weather|rainfall|heatwave|lagoon pollution|oil spill)\b/i,
+      /\b(environment(al)?|renewable|solar energy|emissions|wildlife|reforestation)\b/i,
+      /\b(weather|rainfall|heatwave|oil spill|gas flaring|lagoon pollution)\b/i,
     ],
+    boosts: [/\b(flood|oil spill|climate change|gas flaring)\b/i],
   },
   {
     category: 'Culture',
     weight: 3,
     patterns: [
-      /\b(calabar carnival|culture|cultural|heritage|tradition|festival|masquerade)\b/i,
-      /\b(museum|gallery|language|yoruba|igbo|hausa|efik|literature|poetry|art exhibition)\b/i,
+      /\b(calabar carnival|cultural|heritage|tradition|festival|masquerade|owo|gele)\b/i,
+      /\b(museum|gallery|literature|poetry|art exhibition|cultural day)\b/i,
+      /\b(yoruba|igbo|hausa|efik|fulani|tiv)\b/i,
     ],
+    boosts: [/\b(calabar carnival|heritage festival|masquerade)\b/i],
   },
   {
     category: 'Politics',
     weight: 2,
     patterns: [
-      /\b(president|presidency|tinubu|governor|deputy governor|senate|senator|house of reps|national assembly)\b/i,
-      /\b(election|inec|campaign|party|apc|pdp|labour party|minister|ministry|cabinet|policy)\b/i,
-      /\b(politic(s|al)?|government|lawmaker|bill passed|impeach|constitution|court ruling|efcc|icpc)\b/i,
+      /\b(president|presidency|tinubu|shettima|governor|deputy governor|senate|senator)\b/i,
+      /\b(house of reps|national assembly|election|inec|campaign|apc|pdp|labour party)\b/i,
+      /\b(minister|ministry|cabinet|policy|politic(s|al)?|government|lawmaker)\b/i,
+      /\b(impeach|constitution|court ruling|efcc|icpc|supreme court|federal executive)\b/i,
     ],
+    boosts: [/\b(tinubu|inec|national assembly|senate passes|governor of)\b/i],
   },
 ];
 
@@ -73,7 +88,11 @@ function scoreCategory(haystack: string, rule: Rule): number {
   for (const re of rule.patterns) {
     if (re.test(haystack)) hits += 1;
   }
-  return hits * rule.weight;
+  let score = hits * rule.weight;
+  if (rule.boosts?.some((re) => re.test(haystack))) {
+    score += 6;
+  }
+  return score;
 }
 
 /** Map free-text / provider category labels onto ARB News categories. */
@@ -84,34 +103,47 @@ export function inferCategory(
   const provider = (providerCategory ?? '').toLowerCase();
   const haystack = `${providerCategory ?? ''} ${text}`.toLowerCase();
 
-  // Strong provider labels still win when unambiguous
+  // Unambiguous provider labels
   if (/\bsport/i.test(provider)) return 'Sports';
-  if (/entertain|celebrity|music|film/i.test(provider)) return 'Entertainment';
-  if (/business|technolog|finance|market/i.test(provider)) return 'Business';
+  if (/entertain|celebrity|music|film|showbiz/i.test(provider)) {
+    return 'Entertainment';
+  }
+  if (/business|technolog|finance|markets?/i.test(provider)) return 'Business';
   if (/health|science|climate|environment/i.test(provider)) return 'Environment';
-  if (/culture|lifestyle|travel/i.test(provider) && !/politic/i.test(provider)) {
+  if (/culture|lifestyle|travel|arts/i.test(provider) && !/politic/i.test(provider)) {
     return 'Culture';
   }
 
-  let best: NewsCategory = 'Politics';
-  let bestScore = 0;
+  const scores = RULES.map((rule) => ({
+    category: rule.category,
+    score: scoreCategory(haystack, rule),
+  })).sort((a, b) => b.score - a.score);
 
-  for (const rule of RULES) {
-    const s = scoreCategory(haystack, rule);
-    if (s > bestScore) {
-      bestScore = s;
-      best = rule.category;
-    }
-  }
+  const top = scores[0];
+  const second = scores[1];
 
-  // Tie-break: if sports and politics both mention "government" style noise,
-  // prefer sports when clear sports tokens exist.
+  // Prefer sports over politics when scores are close and sport signals exist
   if (
-    best === 'Politics' &&
-    /\b(super eagles|afcon|npfl|football match|goal scored|fixture)\b/i.test(haystack)
+    top.category === 'Politics' &&
+    second?.category === 'Sports' &&
+    second.score > 0 &&
+    top.score - second.score <= 4 &&
+    /\b(super eagles|afcon|npfl|football|fixture|goal|matchday)\b/i.test(haystack)
   ) {
     return 'Sports';
   }
 
-  return bestScore > 0 ? best : 'Politics';
+  // Prefer entertainment over politics for music/film heavy stories
+  if (
+    top.category === 'Politics' &&
+    second?.category === 'Entertainment' &&
+    second.score > 0 &&
+    top.score - second.score <= 4 &&
+    /\b(nollywood|afrobeats?|concert|album|movie|grammy)\b/i.test(haystack)
+  ) {
+    return 'Entertainment';
+  }
+
+  if (top.score <= 0) return 'Politics';
+  return top.category;
 }

@@ -15,9 +15,11 @@ import { estimateReadingTime } from '@/lib/reading-time';
 import { CATEGORY_ICONS, type Article } from '@/types/article';
 
 async function shareArticle(article: Article): Promise<void> {
+  // Prefer ARB article URL so social previews use our OG cards
   const url =
-    article.url ||
-    (typeof window !== 'undefined' ? window.location.href : '');
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/article/${article.id}`
+      : article.url || '';
   const payload = {
     title: article.title,
     text: `${article.title} — via ARB News`,
@@ -29,7 +31,7 @@ async function shareArticle(article: Article): Promise<void> {
       await navigator.share(payload);
       return;
     } catch {
-      /* cancelled */
+      /* cancelled or failed — fall through to clipboard */
     }
   }
 

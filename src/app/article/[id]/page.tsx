@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ArticleDetailClient } from '@/components/article-detail-client';
 import { getArticleById, getArticles, getRelatedArticles } from '@/lib/articles';
+import { getSiteUrl } from '@/lib/site';
 
 export const revalidate = 300;
 export const dynamicParams = true;
@@ -11,7 +12,6 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  // Prefetch known ids at build time (sample or live, depending on env).
   try {
     const articles = await getArticles();
     return articles.slice(0, 30).map((a) => ({ id: String(a.id) }));
@@ -24,13 +24,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const article = await getArticleById(Number(id));
   if (!article) return { title: 'Article not found' };
+
+  const description = article.content.slice(0, 160);
+  const url = `${getSiteUrl()}/article/${article.id}`;
+
   return {
     title: article.title,
-    description: article.content.slice(0, 160),
+    description,
+    alternates: { canonical: url },
     openGraph: {
+      type: 'article',
+      url,
       title: article.title,
-      description: article.content.slice(0, 160),
-      images: article.imageUrl ? [article.imageUrl] : undefined,
+      description,
+      siteName: 'ARB News',
+      locale: 'en_NG',
+      publishedTime: article.date,
+      authors: [article.source],
+      tags: [article.category, 'Nigeria', 'news'],
+      // File-based opengraph-image.tsx is auto-attached by Next.js
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description,
     },
   };
 }
