@@ -1,95 +1,68 @@
 # ARB News 🇳🇬
 
-**The Pulse of Nigeria** — A modern Nigerian news feed built with **Next.js 15 (App Router)**, **Tailwind CSS v4**, and **shadcn-style** UI components.
+**The Pulse of Nigeria** — Production-minded Next.js news app with live providers, resilience, SEO, and accessible UX.
 
 ## Features
 
-- 📡 Live news via **NewsAPI.org** or **GNews** (sample fallback without keys)
-- 📰 Category filter + free-text search
-- 🔍 Article detail routes with SEO metadata + “Full story” publisher link
-- 💾 Save / unsave (localStorage or host `persistentStorage`)
-- 🧹 Clear all saved
-- 🌙 Light / dark theme (`prefers-color-scheme` on first load)
-- ♿ Skip link, ARIA labels, focus management, Esc to go back
-- 🖼️ `next/image` + SVG fallback on error
-- ⏳ Skeleton loaders + empty states
-- ↗ Share (Web Share API + clipboard)
-- ✨ Framer Motion page transitions
-- 🇳🇬 Green & gold brand theme
+- 📡 Live news via **GNews** / **NewsAPI** with Naija-first ranking
+- ♻️ Retries + stale cache + sample fallback
+- 📰 Category filter + search + clear filters
+- 🔍 Article detail routes + **Read original story**
+- 💾 Save / unsave + clear-all
+- 🌙 Theme + `prefers-color-scheme`
+- ♿ Skip link, ARIA, Esc back, focus management
+- 🖼️ Image fallbacks, skeletons, empty states
+- ↗ Share, reading time, Framer Motion
+- 🗺️ `sitemap.xml`, `robots.txt`, Open Graph image
+- 🧪 Vitest unit tests
+- 📋 [Deploy checklist](./DEPLOY.md)
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Framework | Next.js 15 App Router |
-| UI | Tailwind CSS v4 + CVA components (Button, Card, Badge, Input, Select) |
-| Motion | Framer Motion |
-| Icons | lucide-react |
-| Data | NewsAPI / GNews → `/api/articles` → `useArticles` (sample fallback) |
+Next.js 15 App Router · React 19 · Tailwind CSS v4 · Framer Motion · Vitest
 
-## Getting started
+## Quick start
 
 ```bash
 npm install
-cp .env.example .env.local   # optional for live news
-# Add NEWS_API_KEY=... from https://newsapi.org/register
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-Without API keys the app still runs using sample articles.
-
 ```bash
+npm test
 npm run build
-npm start
-npm run lint
 ```
 
-## Live news / CMS API
+## Live news
 
-| Variable | Description |
-|----------|-------------|
-| `NEWS_API_KEY` | [NewsAPI.org](https://newsapi.org/) key (recommended) |
-| `GNEWS_API_KEY` | Optional [GNews.io](https://gnews.io/) key |
-| `NEWS_PROVIDER` | `auto` (default), `newsapi`, or `gnews` |
+| Variable | Provider |
+|----------|----------|
+| `GNEWS_API_KEY` | [GNews.io](https://gnews.io/) |
+| `NEWS_API_KEY` | [NewsAPI.org](https://newsapi.org/) |
+| `NEWS_PROVIDER` | `auto` \| `gnews` \| `newsapi` |
+| `NEXT_PUBLIC_SITE_URL` | Canonical site URL for SEO |
 
-**Flow**
+Without keys, sample articles are served so local/CI builds always work.
 
-1. `GET /api/articles` calls `loadNews()` → `fetchNewsArticles()`
-2. Tries NewsAPI (`top-headlines?country=ng` + `everything?q=Nigeria`) then GNews
-3. Maps results into the shared `Article` type (category inference, stable ids from URL)
-4. On missing key or provider failure → sample data + warning banner
-5. Responses cached ~5 minutes (`revalidate = 300`)
-
-```
-src/lib/news/
-  index.ts      # provider orchestration + fallback
-  newsapi.ts    # NewsAPI.org client
-  gnews.ts      # GNews client
-  category.ts   # keyword → Politics/Sports/…
-  id.ts         # stable numeric ids from URLs
-```
-
-### Vercel
-
-Add the same env vars in the project **Settings → Environment Variables**, then redeploy.
-
-## Project structure
+## Architecture
 
 ```
 src/
-├── app/                 # App Router pages + API
-│   ├── api/articles/
-│   ├── article/[id]/
-│   ├── saved/
-│   └── page.tsx
+├── app/                 # routes, API, sitemap, robots, OG image
 ├── components/          # UI + feature components
-│   └── ui/
-├── data/                # sample fallback articles
+├── data/                # sample fallback
 ├── hooks/
-├── lib/                 # news providers, persistence, utils
+├── lib/
+│   ├── news/            # providers, relevance, retry, stale cache, logs
+│   └── …
 └── types/
 ```
+
+Pipeline: **live (retry) → stale cache → sample**.
+
+## Production
+
+See **[DEPLOY.md](./DEPLOY.md)** for Vercel env vars, smoke tests, and security notes.
 
 Built with ❤️ for Naija.

@@ -127,7 +127,7 @@ export function ArticleDetailClient({ article, related }: ArticleDetailClientPro
                 Share
               </Button>
               {article.url && (
-                <Button asChild variant="outline">
+                <Button asChild variant="gold" className="font-semibold">
                   <a
                     href={article.url}
                     target="_blank"
@@ -135,7 +135,7 @@ export function ArticleDetailClient({ article, related }: ArticleDetailClientPro
                     aria-label="Read full story on publisher site"
                   >
                     <ExternalLink className="h-4 w-4" aria-hidden />
-                    Full story
+                    Read original story
                   </a>
                 </Button>
               )}

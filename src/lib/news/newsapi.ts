@@ -1,6 +1,7 @@
 import type { Article } from '@/types/article';
 import { inferCategory } from '@/lib/news/category';
 import { stableIdFromString } from '@/lib/news/id';
+import { prioritizeNaijaArticles } from '@/lib/news/relevance';
 
 const NEWSAPI_BASE = 'https://newsapi.org/v2';
 
@@ -31,7 +32,7 @@ function cleanText(value: string | null | undefined): string {
     .trim();
 }
 
-function mapNewsApiArticle(raw: NewsApiArticle): Article | null {
+export function mapNewsApiArticle(raw: NewsApiArticle): Article | null {
   const title = cleanText(raw.title);
   const url = raw.url?.trim();
   if (!title || !url || title === '[Removed]') return null;
@@ -86,7 +87,6 @@ async function newsApiGet(
 
 /**
  * Fetch Nigerian-focused headlines from NewsAPI.org.
- * Uses top-headlines for NG plus a broader "Nigeria" everything query.
  */
 export async function fetchFromNewsApi(apiKey: string): Promise<Article[]> {
   const [headlines, everything] = await Promise.all([
@@ -98,7 +98,7 @@ export async function fetchFromNewsApi(apiKey: string): Promise<Article[]> {
     newsApiGet(
       '/everything',
       {
-        q: 'Nigeria OR Lagos OR Abuja',
+        q: 'Nigeria OR Nigerian OR Lagos OR Abuja OR Naira',
         language: 'en',
         sortBy: 'publishedAt',
         pageSize: '30',
@@ -122,7 +122,5 @@ export async function fetchFromNewsApi(apiKey: string): Promise<Article[]> {
     throw new Error('NewsAPI returned no usable articles');
   }
 
-  // Newest first
-  articles.sort((a, b) => b.date.localeCompare(a.date));
-  return articles;
+  return prioritizeNaijaArticles(articles);
 }

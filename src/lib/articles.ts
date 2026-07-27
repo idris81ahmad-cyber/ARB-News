@@ -6,8 +6,10 @@ export type { FetchNewsResult };
 export { filterArticles, getRelatedArticles };
 
 /** Shared server-side loader used by pages and the API route. */
-export async function loadNews(): Promise<FetchNewsResult> {
-  return fetchNewsArticles();
+export async function loadNews(opts?: {
+  requestId?: string;
+}): Promise<FetchNewsResult> {
+  return fetchNewsArticles(opts);
 }
 
 export async function getArticles(): Promise<Article[]> {

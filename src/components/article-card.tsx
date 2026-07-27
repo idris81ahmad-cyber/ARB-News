@@ -1,5 +1,6 @@
 'use client';
 
+import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { ArticleImage } from '@/components/article-image';
 import { useSaved } from '@/components/saved-provider';
@@ -26,7 +27,7 @@ export function ArticleCard({ article }: ArticleCardProps) {
         className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-naija-gold"
         aria-label={`Open article: ${article.title}`}
       >
-        <div className="relative h-48 w-full bg-emerald-50 dark:bg-emerald-950">
+        <div className="relative h-44 w-full bg-emerald-50 sm:h-48 dark:bg-emerald-950">
           <ArticleImage
             src={article.imageUrl}
             alt=""
@@ -36,13 +37,27 @@ export function ArticleCard({ article }: ArticleCardProps) {
           />
         </div>
       </Link>
-      <CardContent className="space-y-3 p-4">
-        <Badge>
-          <span aria-hidden="true">{icon} </span>
-          {article.category}
-        </Badge>
+      <CardContent className="space-y-3 p-3.5 sm:p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge>
+            <span aria-hidden="true">{icon} </span>
+            {article.category}
+          </Badge>
+          {article.url && (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-naija-green underline-offset-2 hover:underline dark:text-emerald-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              Original
+            </a>
+          )}
+        </div>
         <Link href={`/article/${article.id}`}>
-          <h3 className="text-lg font-bold leading-snug hover:text-naija-green dark:hover:text-emerald-300">
+          <h3 className="text-base font-bold leading-snug sm:text-lg hover:text-naija-green dark:hover:text-emerald-300">
             {article.title}
           </h3>
         </Link>

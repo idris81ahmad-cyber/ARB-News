@@ -9,9 +9,11 @@ export type ArticlesStatus = 'loading' | 'ready' | 'error';
 export type ArticlesMeta = {
   source: string;
   fallback: boolean;
+  stale?: boolean;
   warning: string | null;
   count: number;
   fetchedAt: string;
+  requestId?: string;
 };
 
 export function useArticles() {
@@ -60,9 +62,15 @@ export function useArticles() {
     [articles],
   );
 
+  const clearFilters = useCallback(() => {
+    setCategory('All');
+    setSearchQuery('');
+  }, []);
+
   return {
     articles,
     filteredArticles,
+    totalCount: articles.length,
     status,
     error,
     meta,
@@ -70,6 +78,7 @@ export function useArticles() {
     searchQuery,
     setCategory,
     setSearchQuery,
+    clearFilters,
     reload: load,
     getRelated,
   };

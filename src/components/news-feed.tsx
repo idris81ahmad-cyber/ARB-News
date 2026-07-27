@@ -1,5 +1,6 @@
 'use client';
 
+import { FilterX, RefreshCw } from 'lucide-react';
 import { ArticleCard } from '@/components/article-card';
 import { SkeletonGrid } from '@/components/skeleton-grid';
 import { SiteHeader } from '@/components/site-header';
@@ -10,7 +11,9 @@ import { useTheme } from '@/components/theme-provider';
 
 export function NewsFeed() {
   const {
+    articles,
     filteredArticles,
+    totalCount,
     status,
     error,
     meta,
@@ -18,17 +21,22 @@ export function NewsFeed() {
     searchQuery,
     setCategory,
     setSearchQuery,
+    clearFilters,
     reload,
   } = useArticles();
   const { storageError: savedError } = useSaved();
   const { storageError: themeError } = useTheme();
   const banner = savedError || themeError || meta?.warning || null;
-  const liveLabel =
-    meta && !meta.fallback
-      ? `Live · ${meta.source} · ${meta.count} stories`
-      : meta?.fallback
-        ? 'Sample data'
-        : null;
+
+  const liveLabel = (() => {
+    if (!meta) return null;
+    if (meta.stale) return `Cached · ${meta.count} stories`;
+    if (!meta.fallback) return `Live · ${meta.source} · ${meta.count} stories`;
+    return 'Sample data';
+  })();
+
+  const hasFilters = category !== 'All' || searchQuery.trim().length > 0;
+  const showingCount = filteredArticles.length;
 
   return (
     <>
@@ -47,18 +55,24 @@ export function NewsFeed() {
           {banner}
         </div>
       )}
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-6 text-center">
+      <div className="mx-auto max-w-6xl px-3 py-6 sm:px-4 sm:py-8">
+        <div className="mb-5 text-center sm:mb-6">
           <h2
             id="main-heading"
             tabIndex={-1}
-            className="text-2xl font-bold text-naija-green dark:text-emerald-300 sm:text-3xl"
+            className="text-xl font-bold text-naija-green dark:text-emerald-300 sm:text-3xl"
           >
             📰 Latest Nigerian Headlines
           </h2>
           {liveLabel && (
             <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">
               {liveLabel}
+            </p>
+          )}
+          {status === 'ready' && totalCount > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Showing {showingCount} of {totalCount}
+              {hasFilters ? ' (filtered)' : ''}
             </p>
           )}
         </div>
@@ -72,21 +86,52 @@ export function NewsFeed() {
           >
             <p className="text-red-800 dark:text-red-200">{error}</p>
             <Button type="button" className="mt-4" onClick={() => void reload()}>
+              <RefreshCw className="h-4 w-4" aria-hidden />
               Retry
             </Button>
           </div>
         )}
 
         {status === 'ready' && filteredArticles.length === 0 && (
-          <p className="py-12 text-center text-muted-foreground" role="status">
-            {searchQuery.trim()
-              ? `No articles match “${searchQuery.trim()}”. Try another search or category.`
-              : 'No articles in this category yet.'}
-          </p>
+          <div
+            className="mx-auto max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm"
+            role="status"
+          >
+            <FilterX
+              className="mx-auto mb-3 h-10 w-10 text-muted-foreground"
+              aria-hidden
+            />
+            <h3 className="text-lg font-semibold">No matching stories</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {searchQuery.trim()
+                ? `Nothing matched “${searchQuery.trim()}”${
+                    category !== 'All' ? ` in ${category}` : ''
+                  }. Try fewer keywords or another category.`
+                : category !== 'All'
+                  ? `No ${category} stories in the current feed. Try All or refresh.`
+                  : 'The feed is empty right now. Try refreshing.'}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {hasFilters && (
+                <Button type="button" variant="outline" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              )}
+              <Button type="button" onClick={() => void reload()}>
+                <RefreshCw className="h-4 w-4" aria-hidden />
+                Refresh feed
+              </Button>
+            </div>
+            {articles.length > 0 && hasFilters && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                {articles.length} stories available with filters cleared.
+              </p>
+            )}
+          </div>
         )}
 
         {status === 'ready' && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {filteredArticles.map((article) => (
               <ArticleCard key={article.id} article={article} />
             ))}
