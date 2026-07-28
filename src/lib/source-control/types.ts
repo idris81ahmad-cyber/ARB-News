@@ -1,6 +1,6 @@
 import type { NewsCategory } from '@/types/article';
 
-export type NewsProviderPref = 'auto' | 'newsapi' | 'gnews';
+export type NewsProviderPref = 'auto' | 'newsapi' | 'gnews' | 'rss';
 
 export interface SourceControlConfig {
   /** Substrings matched against source name or URL (case-insensitive). */
@@ -62,7 +62,8 @@ export function normalizeSourceControl(
     preferredProvider:
       input.preferredProvider === 'auto' ||
       input.preferredProvider === 'newsapi' ||
-      input.preferredProvider === 'gnews'
+      input.preferredProvider === 'gnews' ||
+      input.preferredProvider === 'rss'
         ? input.preferredProvider
         : input.preferredProvider === null
           ? null

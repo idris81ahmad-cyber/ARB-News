@@ -2,14 +2,22 @@ import { sampleArticles } from '@/data/sample-articles';
 import { fetchFromGNews } from '@/lib/news/gnews';
 import { createRequestId, newsLog } from '@/lib/news/log';
 import { fetchFromNewsApi } from '@/lib/news/newsapi';
+import { prioritizeNaijaArticles } from '@/lib/news/relevance';
 import { withRetry } from '@/lib/news/retry';
+import { fetchFromRss } from '@/lib/news/rss';
 import { getStaleNews, setStaleNews } from '@/lib/news/stale-cache';
 import { applySourceControl } from '@/lib/source-control/apply';
 import { getSourceControl } from '@/lib/source-control/store';
 import type { SourceStats } from '@/lib/source-control/apply';
 import type { Article } from '@/types/article';
 
-export type NewsSource = 'newsapi' | 'gnews' | 'sample' | 'stale';
+export type NewsSource =
+  | 'newsapi'
+  | 'gnews'
+  | 'rss'
+  | 'mixed'
+  | 'sample'
+  | 'stale';
 
 export interface FetchNewsResult {
   articles: Article[];
@@ -23,11 +31,15 @@ export interface FetchNewsResult {
   droppedByControl?: number;
 }
 
-function preferredProvider(): 'newsapi' | 'gnews' | 'auto' {
+function preferredProvider(): 'newsapi' | 'gnews' | 'rss' | 'auto' {
   const control = getSourceControl();
-  if (control.preferredProvider) return control.preferredProvider;
+  if (control.preferredProvider) {
+    return control.preferredProvider as 'newsapi' | 'gnews' | 'rss' | 'auto';
+  }
   const raw = (process.env.NEWS_PROVIDER ?? 'auto').toLowerCase();
-  if (raw === 'newsapi' || raw === 'gnews' || raw === 'auto') return raw;
+  if (raw === 'newsapi' || raw === 'gnews' || raw === 'rss' || raw === 'auto') {
+    return raw;
+  }
   return 'auto';
 }
 
@@ -45,9 +57,19 @@ function withControl(
   };
 }
 
+function mergeArticleLists(...lists: Article[][]): Article[] {
+  const combined = lists.flat();
+  return prioritizeNaijaArticles(combined, { minKeep: 8, minScore: 0 });
+}
+
 /**
- * Load articles from a configured news CMS/API.
- * Order of resilience: live (retry) → in-memory stale → sample.
+ * Load articles from RSS + optional NewsAPI/GNews.
+ *
+ * Strategy (auto):
+ * 1. Always try Nigerian RSS feeds (no key)
+ * 2. Also try NewsAPI / GNews when keys exist
+ * 3. Merge → rank → source-control
+ * 4. On total failure → stale cache → sample
  */
 export async function fetchNewsArticles(
   opts?: { requestId?: string },
@@ -58,74 +80,87 @@ export async function fetchNewsArticles(
   const gnewsKey = process.env.GNEWS_API_KEY?.trim();
   const provider = preferredProvider();
 
-  const attempts: {
-    name: Exclude<NewsSource, 'sample' | 'stale'>;
-    run: () => Promise<Article[]>;
-  }[] = [];
+  const buckets: { name: Exclude<NewsSource, 'sample' | 'stale' | 'mixed'>; articles: Article[] }[] =
+    [];
+  const errors: string[] = [];
+
+  const runOne = async (
+    name: Exclude<NewsSource, 'sample' | 'stale' | 'mixed'>,
+    run: () => Promise<Article[]>,
+  ) => {
+    try {
+      const articles = await withRetry(name, run, {
+        retries: 2,
+        baseDelayMs: 350,
+        requestId,
+      });
+      if (articles.length) buckets.push({ name, articles });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`${name}: ${message}`);
+      newsLog('error', 'Provider exhausted retries', {
+        requestId,
+        provider: name,
+        error: message,
+      });
+    }
+  };
+
+  const tasks: Promise<void>[] = [];
+
+  // RSS is free and always available unless user forced another single provider
+  if (provider === 'rss' || provider === 'auto') {
+    tasks.push(runOne('rss', () => fetchFromRss()));
+  }
 
   if (provider === 'newsapi' || provider === 'auto') {
     if (newsApiKey) {
-      attempts.push({
-        name: 'newsapi',
-        run: () => fetchFromNewsApi(newsApiKey),
-      });
+      tasks.push(runOne('newsapi', () => fetchFromNewsApi(newsApiKey)));
     }
   }
 
   if (provider === 'gnews' || provider === 'auto') {
     if (gnewsKey) {
-      attempts.push({
-        name: 'gnews',
-        run: () => fetchFromGNews(gnewsKey),
-      });
+      tasks.push(runOne('gnews', () => fetchFromGNews(gnewsKey)));
     }
   }
 
-  if (attempts.length === 0) {
-    newsLog('warn', 'No news API keys configured; using sample articles', {
-      requestId,
-    });
-    return withControl(sampleArticles, {
-      source: 'sample',
-      fallback: true,
-      requestId,
-      warning:
-        'No news API key configured. Set NEWS_API_KEY or GNEWS_API_KEY. Serving sample articles.',
-    });
+  // Forced single provider with missing key
+  if (tasks.length === 0) {
+    if (provider === 'newsapi' || provider === 'gnews') {
+      newsLog('warn', 'Forced provider missing API key; trying RSS', { requestId });
+      await runOne('rss', () => fetchFromRss());
+    } else {
+      await runOne('rss', () => fetchFromRss());
+    }
+  } else {
+    await Promise.all(tasks);
   }
 
-  const errors: string[] = [];
+  if (buckets.length > 0) {
+    const merged = mergeArticleLists(...buckets.map((b) => b.articles));
+    const sourceNames = buckets.map((b) => b.name);
+    const source: NewsSource =
+      sourceNames.length > 1 ? 'mixed' : sourceNames[0] ?? 'rss';
 
-  for (const attempt of attempts) {
-    try {
-      const articles = await withRetry(
-        attempt.name,
-        () => attempt.run(),
-        { retries: 2, baseDelayMs: 350, requestId },
-      );
-      setStaleNews(articles, attempt.name);
-      const controlled = withControl(articles, {
-        source: attempt.name,
-        fallback: false,
-        requestId,
-      });
-      newsLog('info', 'Live news loaded', {
-        requestId,
-        provider: attempt.name,
-        count: controlled.articles.length,
-        dropped: controlled.droppedByControl,
-        durationMs: Date.now() - started,
-      });
-      return controlled;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      errors.push(`${attempt.name}: ${message}`);
-      newsLog('error', 'Provider exhausted retries', {
-        requestId,
-        provider: attempt.name,
-        error: message,
-      });
-    }
+    setStaleNews(merged, source === 'mixed' ? 'rss' : source);
+
+    const controlled = withControl(merged, {
+      source,
+      fallback: false,
+      requestId,
+    });
+
+    newsLog('info', 'Live news loaded', {
+      requestId,
+      provider: source,
+      providers: sourceNames.join('+'),
+      count: controlled.articles.length,
+      dropped: controlled.droppedByControl,
+      durationMs: Date.now() - started,
+    });
+
+    return controlled;
   }
 
   const stale = getStaleNews();
@@ -142,7 +177,7 @@ export async function fetchNewsArticles(
       fallback: true,
       stale: true,
       requestId,
-      warning: `Live providers failed (${errors.join(' | ')}). Showing recent cached headlines from ${stale.fetchedAt}.`,
+      warning: `Live providers failed (${errors.join(' | ') || 'unknown'}). Showing recent cached headlines from ${stale.fetchedAt}.`,
     });
   }
 
@@ -156,6 +191,6 @@ export async function fetchNewsArticles(
     source: 'sample',
     fallback: true,
     requestId,
-    warning: `Live news providers failed (${errors.join(' | ')}). Serving sample articles.`,
+    warning: `Live news providers failed (${errors.join(' | ') || 'none available'}). Serving sample articles.`,
   });
 }
