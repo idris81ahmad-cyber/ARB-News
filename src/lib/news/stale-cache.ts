@@ -1,6 +1,6 @@
 import type { Article } from '@/types/article';
 
-export type LiveNewsSource = 'newsapi' | 'gnews';
+export type LiveNewsSource = 'newsapi' | 'gnews' | 'rss';
 
 export interface StaleCacheEntry {
   articles: Article[];
