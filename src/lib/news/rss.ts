@@ -8,16 +8,46 @@ export type RssFeed = {
   url: string;
 };
 
-/** Curated Nigerian publisher feeds — no API key required. */
+/**
+ * Curated Nigerian publisher feeds — no API key required.
+ * Dead feeds are skipped automatically; keep this list broad.
+ */
 export const NAIJA_RSS_FEEDS: RssFeed[] = [
+  // National / general
   { name: 'Premium Times', url: 'https://www.premiumtimesng.com/feed' },
   { name: 'Punch', url: 'https://punchng.com/feed/' },
   { name: 'The Cable', url: 'https://www.thecable.ng/feed' },
   { name: 'Guardian Nigeria', url: 'https://guardian.ng/feed/' },
   { name: 'Vanguard', url: 'https://www.vanguardngr.com/feed/' },
   { name: 'Daily Trust', url: 'https://dailytrust.com/feed/' },
+  { name: 'ThisDay', url: 'https://www.thisdaylive.com/feed/' },
+  { name: 'Leadership', url: 'https://leadership.ng/feed/' },
+  { name: 'The Sun', url: 'https://sunnewsonline.com/feed/' },
+  { name: 'Nigerian Tribune', url: 'https://tribuneonlineng.com/feed/' },
+  { name: 'The Nation', url: 'https://thenationonlineng.net/feed/' },
+  { name: 'Independent', url: 'https://independent.ng/feed/' },
+  { name: 'PM News', url: 'https://pmnewsnigeria.com/feed/' },
+  { name: 'Blueprint', url: 'https://www.blueprint.ng/feed/' },
+  { name: 'Ripples Nigeria', url: 'https://www.ripplesnigeria.com/feed/' },
+  { name: 'Sahara Reporters', url: 'https://saharareporters.com/feed' },
+  { name: 'Legit.ng', url: 'https://www.legit.ng/rss/all.rss' },
+
+  // TV / broadcast
+  { name: 'Channels TV', url: 'https://www.channelstv.com/feed/' },
+  { name: 'TVC News', url: 'https://www.tvcnews.tv/feed/' },
+
+  // Business / economy
   { name: 'BusinessDay', url: 'https://businessday.ng/feed/' },
   { name: 'Nairametrics', url: 'https://nairametrics.com/feed/' },
+  { name: 'Proshare', url: 'https://www.proshareng.com/rss' },
+
+  // Tech
+  { name: 'TechCabal', url: 'https://techcabal.com/feed/' },
+  { name: 'Techpoint Africa', url: 'https://techpoint.africa/feed/' },
+
+  // Sports
+  { name: 'Complete Sports', url: 'https://www.completesports.com/feed/' },
+  { name: 'Score Nigeria', url: 'https://www.scorenigeria.com.ng/feed/' },
 ];
 
 function decodeEntities(input: string): string {
@@ -46,7 +76,7 @@ function stripHtml(input: string): string {
 
 function tagContent(block: string, tag: string): string {
   const re = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+    `<${tag}(?:\s[^>]*)?>([\s\S]*?)</${tag}>`,
     'i',
   );
   const m = block.match(re);
@@ -55,7 +85,7 @@ function tagContent(block: string, tag: string): string {
 
 function attrFromTag(block: string, tag: string, attr: string): string {
   const re = new RegExp(
-    `<${tag}[^>]*\\b${attr}=["']([^"']+)["'][^>]*/?>`,
+    `<${tag}[^>]*\b${attr}=["']([^"']+)["'][^>]*/?>`,
     'i',
   );
   const m = block.match(re);
@@ -84,6 +114,10 @@ function extractImage(block: string): string {
     attrFromTag(block, 'media:thumbnail', 'url') ||
     attrFromTag(block, 'enclosure', 'url');
   if (media && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(media)) return media;
+  // Some enclosures are images without extension in path
+  if (media && /image\//i.test(attrFromTag(block, 'enclosure', 'type') || '')) {
+    return media;
+  }
 
   // First <img src> inside description/content
   const html =
@@ -160,7 +194,8 @@ async function fetchFeed(feed: RssFeed): Promise<Article[]> {
     const res = await fetch(feed.url, {
       headers: {
         Accept: 'application/rss+xml, application/xml, text/xml, */*',
-        'User-Agent': 'ARB-News/2.1 (+https://github.com/idris81ahmad-cyber/ARB-News)',
+        'User-Agent':
+          'ARB-News/2.1 (+https://github.com/idris81ahmad-cyber/ARB-News)',
       },
       signal: controller.signal,
       next: { revalidate: 300 },
@@ -201,7 +236,8 @@ export async function fetchFromRss(
     if (r.status === 'fulfilled') {
       merged.push(...r.value);
     } else {
-      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      const msg =
+        r.reason instanceof Error ? r.reason.message : String(r.reason);
       errors.push(`${feeds[i]?.name}: ${msg}`);
     }
   });
