@@ -87,11 +87,12 @@ export async function fetchNewsArticles(
   const runOne = async (
     name: Exclude<NewsSource, 'sample' | 'stale' | 'mixed'>,
     run: () => Promise<Article[]>,
+    retries = 2,
   ) => {
     try {
       const articles = await withRetry(name, run, {
-        retries: 2,
-        baseDelayMs: 350,
+        retries,
+        baseDelayMs: 300,
         requestId,
       });
       if (articles.length) buckets.push({ name, articles });
@@ -108,33 +109,38 @@ export async function fetchNewsArticles(
 
   const tasks: Promise<void>[] = [];
 
-  // RSS is free and always available unless user forced another single provider
-  if (provider === 'rss' || provider === 'auto') {
-    tasks.push(runOne('rss', () => fetchFromRss()));
-  }
-
+  // Prefer API providers when keys exist (faster + reliable).
+  // RSS is fallback-only: many Nigerian feeds return 403 from cloud IPs and
+  // slow builds/home SSR to tens of seconds when run on every page render.
   if (provider === 'newsapi' || provider === 'auto') {
     if (newsApiKey) {
-      tasks.push(runOne('newsapi', () => fetchFromNewsApi(newsApiKey)));
+      tasks.push(runOne('newsapi', () => fetchFromNewsApi(newsApiKey), 1));
     }
   }
 
   if (provider === 'gnews' || provider === 'auto') {
     if (gnewsKey) {
-      tasks.push(runOne('gnews', () => fetchFromGNews(gnewsKey)));
+      tasks.push(runOne('gnews', () => fetchFromGNews(gnewsKey), 1));
     }
   }
 
-  // Forced single provider with missing key
+  const hasApiProvider = tasks.length > 0;
+
+  if (provider === 'rss' || (provider === 'auto' && !hasApiProvider)) {
+    tasks.push(runOne('rss', () => fetchFromRss(), 0));
+  }
+
   if (tasks.length === 0) {
-    if (provider === 'newsapi' || provider === 'gnews') {
-      newsLog('warn', 'Forced provider missing API key; trying RSS', { requestId });
-      await runOne('rss', () => fetchFromRss());
-    } else {
-      await runOne('rss', () => fetchFromRss());
-    }
+    newsLog('warn', 'No providers configured; trying RSS', { requestId });
+    await runOne('rss', () => fetchFromRss(), 0);
   } else {
     await Promise.all(tasks);
+  }
+
+  // If APIs failed and we skipped RSS, try RSS once as last live option
+  if (buckets.length === 0 && hasApiProvider && provider === 'auto') {
+    newsLog('warn', 'API providers empty; falling back to RSS', { requestId });
+    await runOne('rss', () => fetchFromRss(), 0);
   }
 
   if (buckets.length > 0) {

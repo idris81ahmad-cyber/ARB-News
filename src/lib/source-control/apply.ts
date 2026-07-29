@@ -66,11 +66,11 @@ export function applySourceControl(
     return true;
   });
 
-  // Sort by relevance then date
+  // Newest first (true “latest news”), then relevance as tie-breaker
   filtered = [...filtered].sort((a, b) => {
-    const rs = naijaRelevanceScore(b) - naijaRelevanceScore(a);
-    if (rs !== 0) return rs;
-    return b.date.localeCompare(a.date);
+    const byDate = b.date.localeCompare(a.date);
+    if (byDate !== 0) return byDate;
+    return naijaRelevanceScore(b) - naijaRelevanceScore(a);
   });
 
   if (config.maxArticles > 0) {

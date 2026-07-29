@@ -75,8 +75,9 @@ function stripHtml(input: string): string {
 }
 
 function tagContent(block: string, tag: string): string {
+  // Double-escape so \s / \S survive RegExp string construction
   const re = new RegExp(
-    `<${tag}(?:\s[^>]*)?>([\s\S]*?)</${tag}>`,
+    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`,
     'i',
   );
   const m = block.match(re);
@@ -85,7 +86,7 @@ function tagContent(block: string, tag: string): string {
 
 function attrFromTag(block: string, tag: string, attr: string): string {
   const re = new RegExp(
-    `<${tag}[^>]*\b${attr}=["']([^"']+)["'][^>]*/?>`,
+    `<${tag}[^>]*\\b${attr}=["']([^"']+)["'][^>]*/?>`,
     'i',
   );
   const m = block.match(re);

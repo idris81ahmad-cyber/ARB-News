@@ -3,7 +3,7 @@ import { loadNews } from '@/lib/articles';
 import { createRequestId, newsLog } from '@/lib/news/log';
 import { getSourceControl } from '@/lib/source-control/store';
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 60; // 1 minute — fresher “latest” headlines
 
 export async function GET() {
   const requestId = createRequestId();

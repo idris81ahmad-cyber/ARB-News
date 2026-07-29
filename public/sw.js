@@ -1,6 +1,6 @@
 /* ARB News service worker — shell + saved offline support */
-const CACHE = 'arb-news-v1';
-const PRECACHE = ['/', '/saved', '/offline'];
+const CACHE = 'arb-news-v2';
+const PRECACHE = ['/saved', '/offline'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -22,21 +22,26 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Never cache API keys traffic incorrectly — network first for API
+  // Always network-only for API so “latest” is never stuck on a stale cache
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request)),
+      fetch(request).catch(() => caches.match(request)),
     );
     return;
   }
 
-  // Navigation: network first, fall back to cache / offline page
+  // Homepage: network-only first (avoid stale empty shells)
+  if (request.mode === 'navigate' && (url.pathname === '/' || url.pathname === '')) {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cached = await caches.match(request);
+        return cached || caches.match('/offline');
+      }),
+    );
+    return;
+  }
+
+  // Other navigations: network first, fall back to cache / offline page
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -48,7 +53,6 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           const cached = await caches.match(request);
           if (cached) return cached;
-          // Saved library is useful offline via localStorage once shell loads
           if (url.pathname.startsWith('/saved')) {
             return caches.match('/saved');
           }

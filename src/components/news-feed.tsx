@@ -8,11 +8,23 @@ import { SkeletonGrid } from '@/components/skeleton-grid';
 import { SiteHeader } from '@/components/site-header';
 import { TopStoriesRail } from '@/components/top-stories-rail';
 import { Button } from '@/components/ui/button';
-import { useArticles } from '@/hooks/use-articles';
+import {
+  useArticles,
+  type ArticlesMeta,
+} from '@/hooks/use-articles';
 import { useSaved } from '@/components/saved-provider';
 import { useTheme } from '@/components/theme-provider';
+import type { Article } from '@/types/article';
 
-export function NewsFeed() {
+interface NewsFeedProps {
+  initialArticles?: Article[];
+  initialMeta?: ArticlesMeta | null;
+}
+
+export function NewsFeed({
+  initialArticles,
+  initialMeta,
+}: NewsFeedProps) {
   const {
     articles,
     visibleArticles,
@@ -31,7 +43,7 @@ export function NewsFeed() {
     setSearchQuery,
     clearFilters,
     reload,
-  } = useArticles();
+  } = useArticles({ initialArticles, initialMeta });
   const { storageError: savedError } = useSaved();
   const { storageError: themeError } = useTheme();
   const banner = savedError || themeError || meta?.warning || null;
@@ -39,12 +51,19 @@ export function NewsFeed() {
   const liveLabel = (() => {
     if (!meta) return null;
     if (meta.stale) return `Cached · ${meta.count} stories`;
-    if (!meta.fallback) return `Live · ${meta.source} · ${meta.count} stories`;
+    if (!meta.fallback) {
+      const when = meta.fetchedAt
+        ? ` · updated ${new Date(meta.fetchedAt).toLocaleString()}`
+        : '';
+      return `Live · ${meta.source} · ${meta.count} stories${when}`;
+    }
     return 'Sample data';
   })();
 
   const hasFilters = category !== 'All' || searchQuery.trim().length > 0;
   const searching = searchQuery !== debouncedSearch;
+  const showSkeleton = status === 'loading' && visibleArticles.length === 0;
+  const isRefreshing = status === 'refreshing';
 
   return (
     <>
@@ -75,18 +94,27 @@ export function NewsFeed() {
           {liveLabel && (
             <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">
               {liveLabel}
+              {isRefreshing ? ' · refreshing…' : ''}
             </p>
           )}
-          {status === 'ready' && totalCount > 0 && (
+          {(status === 'ready' || status === 'refreshing') && totalCount > 0 && (
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm" aria-live="polite">
               Showing {visibleArticles.length} of {filteredCount}
               {filteredCount !== totalCount ? ` (filtered from ${totalCount})` : ''}
               {searching ? ' · updating…' : ''}
+              {' · '}
+              <button
+                type="button"
+                className="underline-offset-2 hover:underline"
+                onClick={() => void reload()}
+              >
+                Refresh now
+              </button>
             </p>
           )}
         </div>
 
-        {status === 'loading' && <SkeletonGrid count={6} />}
+        {showSkeleton && <SkeletonGrid count={6} />}
 
         {status === 'error' && error && (
           <div
@@ -101,7 +129,7 @@ export function NewsFeed() {
           </div>
         )}
 
-        {status === 'ready' && filteredCount === 0 && (
+        {(status === 'ready' || status === 'refreshing') && filteredCount === 0 && (
           <div
             className="mx-auto max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm"
             role="status"
@@ -139,11 +167,12 @@ export function NewsFeed() {
           </div>
         )}
 
-        {status === 'ready' && (
+        {(status === 'ready' || status === 'refreshing') && (
           <ContinueReading />
         )}
 
-        {status === 'ready' && visibleArticles.length > 0 && (
+        {(status === 'ready' || status === 'refreshing') &&
+          visibleArticles.length > 0 && (
           <>
             {!hasFilters && topStories.length > 0 && (
               <TopStoriesRail stories={topStories} />
